@@ -2,7 +2,7 @@ package com.example.playlistmaker
 
 import com.google.gson.annotations.SerializedName
 
-data class Track (
+data class Track(
     val trackId: Long,
     val trackName: String,
     val artistName: String,
@@ -14,4 +14,5 @@ data class Track (
     val primaryGenreName: String,
     val country: String,
     val previewUrl: String
+
 )

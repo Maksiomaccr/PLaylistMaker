@@ -15,7 +15,21 @@ import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class AudioPlayerActivity: AppCompatActivity() {
+class AudioPlayerActivity : AppCompatActivity() {
+    private companion object {
+        const val STATE_DEFAULT = 0
+        const val STATE_PREPARED = 1
+        const val STATE_PLAYING = 2
+        const val STATE_PAUSED = 3
+        const val DELAY = 1000L
+        const val PREVIEW_TIME = 30_000L
+    }
+
+    private lateinit var btnPlay: ImageButton
+    private lateinit var btnPause: ImageButton
+    private var mediaPlayer = MediaPlayer()
+    private var previewUrl: String? = null
+
     private lateinit var backBtn: ImageButton
     private lateinit var trackName: TextView
     private lateinit var artistName: TextView
@@ -27,40 +41,23 @@ class AudioPlayerActivity: AppCompatActivity() {
     private lateinit var country: TextView
     private lateinit var trackDuration: TextView
 
-
-    private lateinit var btnPlay: ImageButton
-    private lateinit var btnPause: ImageButton
-    private var mediaPlayer = MediaPlayer()
-    private var previewUrl: String? = null
-
-    companion object {
-        private const val STATE_DEFAULT = 0
-        private const val STATE_PREPARED = 1
-        private const val STATE_PLAYING = 2
-        private const val STATE_PAUSED = 3
-
-        private const val DELAY = 1000L
-
-        private const val PREVIEW_TIME = 30_000L
-    }
-
     private var playerState = STATE_DEFAULT
     private var mainThreadHandler: Handler? = null
     private var elapsedTime: Long = 0L
 
     private fun startTimer() {
-
         val startTime = System.currentTimeMillis()
 
         mainThreadHandler?.post(
             createUpdateTimerTask(startTime, PREVIEW_TIME, elapsedTime)
         )
+
     }
+
     private fun createUpdateTimerTask(startTime: Long, duration: Long, elTime: Long): Runnable {
         return object : Runnable {
             override fun run() {
                 elapsedTime = System.currentTimeMillis() - startTime + elTime
-
                 if (elapsedTime <= duration) {
                     if (playerState == STATE_PLAYING) {
                         val seconds = elapsedTime / DELAY
@@ -75,19 +72,19 @@ class AudioPlayerActivity: AppCompatActivity() {
             }
         }
     }
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_audio_player)
-
-        btnPlay = findViewById(R.id.playButton)
-        btnPause = findViewById(R.id.pauseButton)
-
-        mainThreadHandler = Handler(Looper.getMainLooper())
         backBtn = findViewById(R.id.back)
-        backBtn.setOnClickListener{
+        backBtn.setOnClickListener {
             finish()
         }
+        mainThreadHandler = Handler(Looper.getMainLooper())
+        btnPlay = findViewById(R.id.playButton)
+        btnPause = findViewById(R.id.pauseButton)
+        trackDuration = findViewById(R.id.time)
 
         trackName = findViewById(R.id.trackName)
         artistName = findViewById(R.id.artistName)
@@ -97,7 +94,7 @@ class AudioPlayerActivity: AppCompatActivity() {
         year = findViewById(R.id.year)
         genre = findViewById(R.id.genre)
         country = findViewById(R.id.country)
-        trackDuration = findViewById(R.id.time)
+
 
         val arguments = intent.extras
         if (arguments != null) {
@@ -118,13 +115,13 @@ class AudioPlayerActivity: AppCompatActivity() {
 
             val releaseDate = arguments.getString("releaseDate")
             year.text = releaseDate?.substring(0, 4).toString()
-
+            previewUrl = arguments.getString("previewUrl")
             genre.text = arguments.getString("primaryGenreName")
             country.text = arguments.getString("country")
-            previewUrl = arguments.getString("previewUrl")
+
 
             val artworkUrl = arguments.getString("artworkUrl100")
-            fun getCoverArtwork() = artworkUrl?.replaceAfterLast('/',"512x512bb.jpg")
+            fun getCoverArtwork() = artworkUrl?.replaceAfterLast('/', "512x512bb.jpg")
 
             val radius = resources.getDimensionPixelSize(R.dimen.album_large_image_radius)
 
@@ -137,7 +134,6 @@ class AudioPlayerActivity: AppCompatActivity() {
                 .into(trackImage)
         }
         preparePlayer()
-
         btnPlay.setOnClickListener {
             if (playerState == STATE_PREPARED || playerState == STATE_PAUSED) {
                 startPlayer()
@@ -152,14 +148,20 @@ class AudioPlayerActivity: AppCompatActivity() {
         }
     }
 
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer.release()
+
+    }
+
     override fun onPause() {
         super.onPause()
         pausePlayer()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaPlayer.release()
+    private fun resetTimerUI() {
+        trackDuration?.text = "0:00"
     }
 
     private fun preparePlayer() {
@@ -175,9 +177,6 @@ class AudioPlayerActivity: AppCompatActivity() {
         }
     }
 
-    private fun resetTimerUI() {
-        trackDuration?.text = "0:00"
-    }
 
     private fun startPlayer() {
         mediaPlayer.start()
@@ -192,5 +191,4 @@ class AudioPlayerActivity: AppCompatActivity() {
         btnPause.visibility = View.GONE
         playerState = STATE_PAUSED
     }
-
 }
